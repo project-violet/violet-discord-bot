@@ -1,18 +1,21 @@
 use std::env;
 
+use itertools::Itertools;
 use serenity::async_trait;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, StandardFramework};
 use serenity::model::channel::Message;
 use serenity::model::prelude::AttachmentType;
 use serenity::prelude::*;
+use serenity::utils::Colour;
+use sysinfo::{CpuExt, NetworkExt, ProcessExt, System, SystemExt};
 
 use crate::violet::{request_comments, request_rank};
 
 pub(crate) mod violet;
 
 #[group]
-#[commands(rank, thumbnail, comments)]
+#[commands(rank, thumbnail, comments, status)]
 struct Commands;
 
 struct Handler;
@@ -70,6 +73,56 @@ async fn comments(ctx: &Context, msg: &Message) -> CommandResult {
     };
 
     msg.reply(ctx, &result[..]).await?;
+
+    Ok(())
+}
+
+#[command]
+async fn status(ctx: &Context, msg: &Message) -> CommandResult {
+    let mut sys = System::new_all();
+
+    sys.refresh_all();
+    sys.refresh_cpu();
+
+    let status_cpu = format!(
+        "{}",
+        sys.cpus()
+            .iter()
+            .map(|cpu| format!("{:.3}%", cpu.cpu_usage()))
+            .join(", ")
+    );
+
+    let mem_total = sys.total_memory();
+    let mem_usage = sys.used_memory();
+    let swap_total = sys.total_swap();
+    let swap_usage = sys.used_swap();
+
+    let status_ram = format!(
+        "{:.3}MB/{:.3}MB({:.1}%)",
+        mem_usage as f64 / 1024.0 / 1024.0,
+        mem_total as f64 / 1024.0 / 1024.0,
+        mem_usage as f64 / mem_total as f64 * 100.0,
+    );
+
+    let status_swap = format!(
+        "{:.3}MB/{:.3}MB({:.1}%)",
+        swap_usage as f64 / 1024.0 / 1024.0,
+        swap_total as f64 / 1024.0 / 1024.0,
+        swap_usage as f64 / swap_total as f64 * 100.0,
+    );
+
+    msg.channel_id
+        .send_message(&ctx.http, |m| {
+            m.embed(|e| {
+                e.title("Violet Server Status")
+                    // .description(format!("{status_cpu}\n\n{status_ram}\n\n{status_swap}"))
+                    .field("⚙️ Cpu Usage", status_cpu, false)
+                    .field("📦 Memory Usage", status_ram, false)
+                    .field("💽 Swap Usage", status_swap, false)
+                    .colour(Colour::from_rgb(0, 200, 0))
+            })
+        })
+        .await?;
 
     Ok(())
 }
