@@ -7,12 +7,12 @@ use serenity::model::channel::Message;
 use serenity::model::prelude::AttachmentType;
 use serenity::prelude::*;
 
-use crate::violet::request_rank;
+use crate::violet::{request_comments, request_rank};
 
 pub(crate) mod violet;
 
 #[group]
-#[commands(rank, thumbnail)]
+#[commands(rank, thumbnail, comments)]
 struct Commands;
 
 struct Handler;
@@ -53,6 +53,18 @@ async fn main() {
 #[command]
 async fn rank(ctx: &Context, msg: &Message) -> CommandResult {
     let Ok(result) = request_rank().await else {
+        msg.reply(ctx, "Internal Server Error 😢").await?;
+        return Ok(());
+    };
+
+    msg.reply(ctx, &result[..]).await?;
+
+    Ok(())
+}
+
+#[command]
+async fn comments(ctx: &Context, msg: &Message) -> CommandResult {
+    let Ok(result) = request_comments().await else {
         msg.reply(ctx, "Internal Server Error 😢").await?;
         return Ok(());
     };

@@ -3,6 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use chrono::DateTime;
 use itertools::Itertools;
 use serde_json::Value;
 use sha2::{Digest, Sha512};
@@ -60,4 +61,49 @@ pub async fn request_rank() -> eyre::Result<String> {
         .join("\n");
 
     Ok(result)
+}
+
+pub async fn request_comments() -> eyre::Result<String> {
+    // /community/anon/artistcomment/read
+    let response = reqwest::get(
+        "https://koromo.xyz/api/community/anon/artistcomment/read?name=global_general",
+    )
+    .await?;
+
+    if !response.status().is_success() {
+        eyre::bail!("Comment request error!");
+    }
+
+    let body = response.text().await?;
+    let result: Value = serde_json::from_str(&body[..])?;
+    let result = result["result"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .take(10)
+        .rev()
+        .map(|e| {
+            let author = &e["UserAppId"].as_str().unwrap()[..8];
+            let timestamp = DateTime::parse_from_rfc3339(e["TimeStamp"].as_str().unwrap())
+                .unwrap()
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string();
+            let body = e["Body"].as_str().unwrap();
+
+            format!("{author} ({timestamp})\n{body}\n\n")
+        })
+        .join("");
+
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::request_comments;
+
+    #[tokio::test]
+    async fn unittest_request_comments() -> eyre::Result<()> {
+        request_comments().await?;
+        Ok(())
+    }
 }
