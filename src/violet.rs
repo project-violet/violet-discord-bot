@@ -8,6 +8,14 @@ use itertools::Itertools;
 use serde_json::Value;
 use sha2::{Digest, Sha512};
 
+fn valid_domain(path: &str) -> String {
+    if env::var("ON_SERVER").is_ok() {
+        format!("http://127.0.0.1:7788{path}")
+    } else {
+        format!("https://koromo.xyz/api{path}")
+    }
+}
+
 fn create_hmac(salt: &str) -> (String, String) {
     let mut hasher = Sha512::new();
     let start = SystemTime::now();
@@ -38,7 +46,7 @@ fn get2() -> (String, String) {
 }
 
 pub async fn request_rank() -> eyre::Result<String> {
-    let response = reqwest::get("https://koromo.xyz/api/top?offset=0&count=10&type=daily").await?;
+    let response = reqwest::get(valid_domain("/top?offset=0&count=10&type=daily")).await?;
 
     if !response.status().is_success() {
         eyre::bail!("Request rank error!");
@@ -64,10 +72,9 @@ pub async fn request_rank() -> eyre::Result<String> {
 }
 
 pub async fn request_comments() -> eyre::Result<String> {
-    // /community/anon/artistcomment/read
-    let response = reqwest::get(
-        "https://koromo.xyz/api/community/anon/artistcomment/read?name=global_general",
-    )
+    let response = reqwest::get(valid_domain(
+        "/community/anon/artistcomment/read?name=global_general",
+    ))
     .await?;
 
     if !response.status().is_success() {
