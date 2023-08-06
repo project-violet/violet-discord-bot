@@ -8,7 +8,7 @@ use serenity::model::channel::Message;
 use serenity::model::prelude::AttachmentType;
 use serenity::prelude::*;
 use serenity::utils::Colour;
-use sysinfo::{CpuExt, NetworkExt, ProcessExt, System, SystemExt};
+use sysinfo::{CpuExt, System, SystemExt};
 
 use crate::violet::{request_comments, request_rank};
 
@@ -115,9 +115,8 @@ async fn status(ctx: &Context, msg: &Message) -> CommandResult {
         .send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("Violet Server Status")
-                    // .description(format!("{status_cpu}\n\n{status_ram}\n\n{status_swap}"))
-                    .field("⚙️ Cpu Usage", status_cpu, false)
-                    .field("📦 Memory Usage", status_ram, false)
+                    .field("⚙️ Cpu Usage", status_cpu, true)
+                    .field("📦 Memory Usage", status_ram, true)
                     .field("💽 Swap Usage", status_swap, false)
                     .colour(Colour::from_rgb(0, 200, 0))
             })
